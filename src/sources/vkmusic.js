@@ -1,4 +1,4 @@
-import { encodeTrack, http1makeRequest, logger, makeRequest } from '../utils.js'
+import { encodeTrack, http1makeRequest, logger, makeRequest, applyProxyToUrl } from '../utils.js'
 import HLSHandler from '../playback/hls/HLSHandler.js'
 
 const API_BASE = 'https://api.vk.com/method/'
@@ -56,7 +56,8 @@ export default class VKMusicSource {
   async _refreshAccessToken() {
     if (!this.cookie) throw new Error('No cookie provided')
     logger('debug', 'VKMusic', 'Refreshing access token...')
-    const { body, error, statusCode } = await http1makeRequest('https://login.vk.ru/?act=web_token', {
+    const { url: finalUrl, proxy } = applyProxyToUrl('https://login.vk.ru/?act=web_token', this.config.proxy)
+    const { body, error, statusCode } = await http1makeRequest(finalUrl, {
       method: 'POST',
       headers: {
         'User-Agent': USER_AGENT,
@@ -68,7 +69,7 @@ export default class VKMusicSource {
       body: 'version=1&app_id=6287487',
       disableBodyCompression: true,
       localAddress: this.nodelink.routePlanner?.getIP(),
-      proxy: this.config.proxy
+      proxy
     })
 
     if (error || statusCode !== 200 || body.type !== 'okay') {
@@ -166,7 +167,8 @@ export default class VKMusicSource {
   async _scrapePlaylist(url) {
     try {
       logger('debug', 'VKMusic', `Scraping playlist: ${url}`)
-      const { body, statusCode } = await http1makeRequest(url, { headers: { 'User-Agent': USER_AGENT, 'Cookie': this.cookie }, proxy: this.config.proxy })
+      const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+      const { body, statusCode } = await http1makeRequest(finalUrl, { headers: { 'User-Agent': USER_AGENT, 'Cookie': this.cookie }, proxy })
       if (statusCode !== 200) throw new Error(`HTTP ${statusCode}`)
       const dataAudioMatch = body.match(/data-audio="([^"]+)"/g)
       if (dataAudioMatch) {
@@ -214,7 +216,8 @@ export default class VKMusicSource {
   async _scrapeTrack(url) {
     try {
       logger('debug', 'VKMusic', `Scraping track: ${url}`)
-      const { body, statusCode } = await http1makeRequest(url, { headers: { 'User-Agent': USER_AGENT, 'Cookie': this.cookie }, proxy: this.config.proxy })
+      const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+      const { body, statusCode } = await http1makeRequest(finalUrl, { headers: { 'User-Agent': USER_AGENT, 'Cookie': this.cookie }, proxy })
       if (statusCode !== 200) throw new Error(`HTTP ${statusCode}`)
       const dataAudioMatch = body.match(/data-audio="([^"]+)"/)
       if (dataAudioMatch) {
@@ -323,7 +326,8 @@ export default class VKMusicSource {
         type: 'mpegts'
       }
     }
-    const { stream, error } = await http1makeRequest(url, { method: 'GET', streamOnly: true, headers, proxy: this.config.proxy })
+    const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+    const { stream, error } = await http1makeRequest(finalUrl, { method: 'GET', streamOnly: true, headers, proxy })
     if (error) throw error
     return { stream, type: 'mp3' }
   }
@@ -334,10 +338,11 @@ export default class VKMusicSource {
     params.access_token = this.accessToken
     params.v = API_VERSION
     Object.keys(params).forEach(k => url.searchParams.append(k, params[k]))
-    const { body, error, statusCode } = await makeRequest(url.toString(), {
+    const { url: finalUrl, proxy } = applyProxyToUrl(url.toString(), this.config.proxy)
+    const { body, error, statusCode } = await makeRequest(finalUrl, {
       method: 'GET', headers: { 'User-Agent': 'KateMobileAndroid/56 lite-460 (Android 4.4.2; SDK 19; x86; unknown Android SDK built for x86; en)' },
       localAddress: this.nodelink.routePlanner?.getIP(),
-      proxy: this.config.proxy
+      proxy
     })
     if (error || statusCode !== 200 || body.error) {
       if ((statusCode === 401 || body?.error?.error_code === 5) && this.cookie) {

@@ -1,5 +1,5 @@
 import { PassThrough } from 'node:stream'
-import { encodeTrack, http1makeRequest, logger, getBestMatch, } from '../utils.js'
+import { encodeTrack, http1makeRequest, logger, getBestMatch, applyProxyToUrl } from '../utils.js'
 import { desEcbDecryptBase64ToUtf8 } from '../decrypters/des-ecb.js'
 
 const API_BASE = 'https://www.jiosaavn.com/api.php'
@@ -233,10 +233,12 @@ export default class JioSaavnSource {
   }
 
   async loadStream(_track, url, _protocol, _additionalData) {
-    const { stream, error, statusCode } = await http1makeRequest(url, {
+    const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+
+    const { stream, error, statusCode } = await http1makeRequest(finalUrl, {
       method: 'GET',
       streamOnly: true,
-      proxy: this.config.proxy
+      proxy
     })
 
     if (error || statusCode !== 200) {
@@ -283,10 +285,12 @@ export default class JioSaavnSource {
       ...params
     }).toString()
 
-    const { body, error, statusCode } = await http1makeRequest(url.toString(), {
+    const { url: finalUrl, proxy } = applyProxyToUrl(url.toString(), this.config.proxy)
+
+    const { body, error, statusCode } = await http1makeRequest(finalUrl, {
       method: 'GET',
       headers: HEADERS,
-      proxy: this.config.proxy
+      proxy
     })
 
     if (error || statusCode !== 200) {

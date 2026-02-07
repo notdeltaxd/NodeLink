@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { Transform } from 'node:stream'
-import { http1makeRequest, logger } from '../../utils.js'
+import { http1makeRequest, logger, applyProxyToUrl } from '../../utils.js'
 
 class DecryptTransform extends Transform {
   constructor(algorithm, key, iv) {
@@ -37,8 +37,9 @@ export default class SegmentFetcher {
       if (resolved) url = resolved
     }
 
-    const { body, error, statusCode } = await http1makeRequest(url, {
-      headers: this.headers, responseType: 'buffer', localAddress: this.localAddress, proxy: this.proxy
+    const { url: finalUrl, proxy } = applyProxyToUrl(url, this.proxy)
+    const { body, error, statusCode } = await http1makeRequest(finalUrl, {
+      headers: this.headers, responseType: 'buffer', localAddress: this.localAddress, proxy
     })
 
         if (error || statusCode !== 200 || !body || body.length === 0) {
@@ -55,8 +56,9 @@ export default class SegmentFetcher {
 
   async fetchMap(mapInfo, keyInfo = null) {
     if (!mapInfo) return null
-    const { body, error, statusCode } = await http1makeRequest(mapInfo.uri, {
-      headers: this.headers, responseType: 'buffer', localAddress: this.localAddress, proxy: this.proxy
+    const { url: finalUrl, proxy } = applyProxyToUrl(mapInfo.uri, this.proxy)
+    const { body, error, statusCode } = await http1makeRequest(finalUrl, {
+      headers: this.headers, responseType: 'buffer', localAddress: this.localAddress, proxy
     })
     if (error || statusCode !== 200) throw new Error(`Map fetch failed: ${statusCode}`)
     if (keyInfo?.iv && body.length % 16 === 0) {
@@ -82,12 +84,13 @@ export default class SegmentFetcher {
       headers.Range = `bytes=${segment.byteRange.offset}-${end}`
     }
 
-    const { body, stream, error, statusCode } = await http1makeRequest(url, {
+    const { url: finalUrl, proxy } = applyProxyToUrl(url, this.proxy)
+    const { body, stream, error, statusCode } = await http1makeRequest(finalUrl, {
       headers,
       responseType: options.stream ? undefined : 'buffer',
       streamOnly: options.stream,
       localAddress: this.localAddress,
-      proxy: this.proxy,
+      proxy,
       timeout: 15000
     })
 

@@ -2,7 +2,7 @@
 * Credits: https://github.com/southctrl; adapted for NodeLink
 */
 
-import { encodeTrack, http1makeRequest, logger, getBestMatch } from '../utils.js'
+import { encodeTrack, http1makeRequest, logger, getBestMatch, applyProxyToUrl } from '../utils.js'
 import HLSHandler from '../playback/hls/HLSHandler.js'
 
 const USER_AGENT =
@@ -178,7 +178,8 @@ export default class GaanaSource {
       return { stream, type: 'mp4' }
     }
 
-    const { stream, error, statusCode } = await http1makeRequest(url, { method: 'GET', streamOnly: true, headers: BASE_HEADERS, proxy: this.config.proxy })
+    const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+    const { stream, error, statusCode } = await http1makeRequest(finalUrl, { method: 'GET', streamOnly: true, headers: BASE_HEADERS, proxy })
     if (error || statusCode !== 200 || !stream) {
       throw new Error(error?.message || `Stream status ${statusCode}`)
     }
@@ -207,11 +208,12 @@ export default class GaanaSource {
 
   async streamUrlChunk(outputStream, url) {
     try {
-      const { stream, statusCode, error } = await http1makeRequest(url, {
+      const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+      const { stream, statusCode, error } = await http1makeRequest(finalUrl, {
         method: 'GET',
         streamOnly: true,
         headers: BASE_HEADERS,
-        proxy: this.config.proxy
+        proxy
       })
 
       if (error || statusCode !== 200 || !stream) {
@@ -356,7 +358,8 @@ export default class GaanaSource {
       finalPath = finalPath.slice(4)
     }
 
-    const { body, statusCode, error } = await http1makeRequest(`${this.baseUrl}${finalPath}`, {
+    const { url: finalUrl, proxy } = applyProxyToUrl(`${this.baseUrl}${finalPath}`, this.config.proxy)
+    const { body, statusCode, error } = await http1makeRequest(finalUrl, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -364,7 +367,7 @@ export default class GaanaSource {
         Referer: 'https://gaana.com/'
       },
       disableBodyCompression: true,
-      proxy: this.config.proxy
+      proxy
     })
 
     if (error || statusCode !== 200 || !body) return null

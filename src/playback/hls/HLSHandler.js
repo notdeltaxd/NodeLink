@@ -1,5 +1,5 @@
 import { PassThrough } from 'node:stream'
-import { http1makeRequest, logger } from '../../utils.js'
+import { http1makeRequest, logger, applyProxyToUrl } from '../../utils.js'
 import PlaylistParser from './PlaylistParser.js'
 import SegmentFetcher from './SegmentFetcher.js'
 
@@ -83,8 +83,9 @@ export default class HLSHandler extends PassThrough {
   async _playlistLoop() {
     if (this.stop) return
     try {
-      const { body: playlistContent, error, statusCode } = await http1makeRequest(this.currentUrl, {
-        headers: this.headers, method: 'GET', localAddress: this.localAddress, proxy: this.proxy
+      const { url: finalUrl, proxy } = applyProxyToUrl(this.currentUrl, this.proxy)
+      const { body: playlistContent, error, statusCode } = await http1makeRequest(finalUrl, {
+        headers: this.headers, method: 'GET', localAddress: this.localAddress, proxy
       })
 
       if (error || statusCode !== 200) {

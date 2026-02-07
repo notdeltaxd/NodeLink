@@ -110,9 +110,10 @@ export default {
       userToken: '', // (optional) get from vk in browser devtools -> reqs POST /?act=web_token HTTP/2 - headers -> response -> access_token
       userCookie: '', // (required without userToken) get from vk in browser devtools -> reqs POST /?act=web_token HTTP/2 - headers -> request -> cookie (copy full cookie header)
       proxy: {
-        url: '',
-        username: '',
-        password: ''
+        url: '', // Traditional: http://proxy:port or socks5://proxy:port, CF Workers: https://your-worker.workers.dev (auto-detected)
+        username: '', // Optional: for traditional proxies only
+        password: '', // Optional: for traditional proxies only
+        type: '' // Optional: 'cloudflare' or 'url-rewrite' to force CF mode, empty for auto-detect
       }
     },
     amazonmusic: {
@@ -244,9 +245,10 @@ export default {
       playlistLoadLimit: 50,
       artistLoadLimit: 20,
       proxy: {
-        url: '',
+        url: '', // Traditional: http://proxy:port, CF Workers: https://your-worker.workers.dev
         username: '',
-        password: ''
+        password: '',
+        type: '' // Optional: 'cloudflare' or 'url-rewrite' to force CF mode
       }
       // "secretKey": "38346591" // Optional, defaults to standard key
     },
@@ -258,9 +260,10 @@ export default {
       albumLoadLimit: 100,
       artistLoadLimit: 100,
       proxy: {
-        url: '', // The HTTP/HTTPS proxy to use
-        username: '', // Optional username
-        password: '' // Optional password
+        url: '', // Traditional: http://proxy:port, CF Workers: https://your-worker.workers.dev
+        username: '', // Optional: for traditional proxies only
+        password: '', // Optional: for traditional proxies only
+        type: '' // Optional: 'cloudflare' or 'url-rewrite' to force CF mode
       }
     },
     "google-tts": {
@@ -390,9 +393,10 @@ export default {
       albumLoadLimit: 1, // 0 = no limit, 1 = 50 tracks, 2 = 100 tracks, etc.
       playlistLoadLimit: 1, // 0 = no limit, 1 = 100 tracks, 2 = 200 tracks, etc.
       proxy: {
-        url: '',
+        url: '', // Traditional: http://proxy:port, CF Workers: https://your-worker.workers.dev
         username: '',
-        password: ''
+        password: '',
+        type: '' // Optional: 'cloudflare' or 'url-rewrite' to force CF mode
       }
     }
   },

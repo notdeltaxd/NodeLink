@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { PassThrough } from 'node:stream'
-import { encodeTrack, getBestMatch, http1makeRequest, logger } from '../utils.js'
+import { encodeTrack, getBestMatch, http1makeRequest, logger, applyProxyToUrl } from '../utils.js'
 
 const API_BASE = 'https://api.music.yandex.net'
 const USER_AGENT = 'Yandex-Music-API'
@@ -229,11 +229,12 @@ export default class YandexMusicSource {
   async loadStream(_track, url) {
     const stream = new PassThrough()
     try {
-      const response = await http1makeRequest(url, {
+      const { url: finalUrl, proxy } = applyProxyToUrl(url, this.config.proxy)
+      const response = await http1makeRequest(finalUrl, {
         method: 'GET',
         streamOnly: true,
         localAddress: this.nodelink.routePlanner?.getIP(),
-        proxy: this.config.proxy
+        proxy
       })
 
       if (response.error || (response.statusCode && response.statusCode !== 200 && response.statusCode !== 206)) {
@@ -592,7 +593,9 @@ export default class YandexMusicSource {
       url.searchParams.set(key, value)
     }
 
-    const { statusCode, body } = await http1makeRequest(url.toString(), {
+    const { url: finalUrl, proxy } = applyProxyToUrl(url.toString(), this.config.proxy)
+
+    const { statusCode, body } = await http1makeRequest(finalUrl, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -601,7 +604,7 @@ export default class YandexMusicSource {
         'X-Yandex-Music-Client': CLIENT_HEADER
       },
       localAddress: this.nodelink.routePlanner?.getIP(),
-      proxy: this.config.proxy
+      proxy
     })
 
     if (statusCode !== 200) {

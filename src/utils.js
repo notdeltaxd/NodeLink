@@ -1899,6 +1899,31 @@ function cleanupLogger() {
   }
 }
 
+/**
+ * Apply proxy transformation to URL if needed.
+ * Supports both traditional proxies (handled by proxy-agent) and CF Workers-style URL-rewriting proxies.
+ * @param {string} url - Original target URL
+ * @param {object} proxy - Proxy config {url, username?, password?, type?}
+ * @returns {{ url: string, proxy: object|null }} - Transformed URL and proxy config for http1makeRequest
+ */
+function applyProxyToUrl(url, proxy) {
+  if (!proxy?.url) return { url, proxy: null }
+
+  // Detect CF Workers proxy: explicit type or URL pattern
+  const isCfProxy =
+    proxy.type === 'cloudflare' ||
+    proxy.type === 'url-rewrite' ||
+    /\.workers\.dev\/?$/i.test(proxy.url)
+
+  if (isCfProxy) {
+    const proxyBase = proxy.url.endsWith('/') ? proxy.url.slice(0, -1) : proxy.url
+    return { url: `${proxyBase}/${url}`, proxy: null }
+  }
+
+  // Traditional proxy - url unchanged, proxy passed to http1makeRequest
+  return { url, proxy }
+}
+
 export {
   initLogger,
   cleanupLogger,
@@ -1922,5 +1947,6 @@ export {
   checkForUpdates,
   sendErrorResponse,
   applyEnvOverrides,
+  applyProxyToUrl,
   getBestMatch
 }
