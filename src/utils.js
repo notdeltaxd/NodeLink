@@ -20,6 +20,12 @@ import {
   SEMVER_PATTERN
 } from './constants.js'
 
+let ProxyAgent
+try {
+  const mod = await import('proxy-agent')
+  ProxyAgent = mod.ProxyAgent || mod.default
+} catch { }
+
 let loggingConfig = {}
 const logLevels = {
   debug: 0,
@@ -1072,18 +1078,37 @@ async function _internalHttp1Request(urlString, options = {}) {
 }
 
 async function http1makeRequest(urlString, options = {}) {
-  const { maxRetries = 3 } = options
+  const { maxRetries = 3, proxy } = options
   let attempt = 0
 
   while (true) {
     try {
-      const isHttps = new URL(urlString).protocol === 'https:'
-      const useKeepAlive = !options.streamOnly
-      const agent = useKeepAlive
-        ? isHttps
-          ? httpsAgent
-          : httpAgent
-        : new (isHttps ? https : http).Agent({ keepAlive: false })
+      const url = new URL(urlString)
+      const isHttps = url.protocol === 'https:'
+      let agent = options.agent
+      if (!agent) {
+        if (proxy && proxy.url) {
+          if (ProxyAgent) {
+            const proxyUrl = new URL(proxy.url)
+            if (proxy.username && proxy.password) {
+              proxyUrl.username = proxy.username
+              proxyUrl.password = proxy.password
+            }
+            agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl.href })
+            logger('debug', 'Network', `Using proxy for ${url.hostname}: ${proxy.url}`)
+          } else {
+            logger('warn', 'Network', 'Proxy configured but proxy-agent not installed.')
+          }
+        }
+        if (!agent) {
+          const useKeepAlive = !options.streamOnly
+          agent = useKeepAlive
+            ? isHttps
+              ? httpsAgent
+              : httpAgent
+            : new (isHttps ? https : http).Agent({ keepAlive: false })
+        }
+      }
 
       const newOptions = { ...options, agent }
 

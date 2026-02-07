@@ -166,7 +166,8 @@ export default class GaanaSource {
       const stream = new HLSHandler(url, {
         type: 'mpegts',
         localAddress: this.nodelink.routePlanner?.getIP(),
-        startTime: additionalData?.startTime || 0
+        startTime: additionalData?.startTime || 0,
+        proxy: this.config.proxy
       })
       return { stream, type: 'mpegts' }
     }
@@ -177,7 +178,7 @@ export default class GaanaSource {
       return { stream, type: 'mp4' }
     }
 
-    const { stream, error, statusCode } = await http1makeRequest(url, { method: 'GET', streamOnly: true, headers: BASE_HEADERS })
+    const { stream, error, statusCode } = await http1makeRequest(url, { method: 'GET', streamOnly: true, headers: BASE_HEADERS, proxy: this.config.proxy })
     if (error || statusCode !== 200 || !stream) {
       throw new Error(error?.message || `Stream status ${statusCode}`)
     }
@@ -209,7 +210,8 @@ export default class GaanaSource {
       const { stream, statusCode, error } = await http1makeRequest(url, {
         method: 'GET',
         streamOnly: true,
-        headers: BASE_HEADERS
+        headers: BASE_HEADERS,
+        proxy: this.config.proxy
       })
 
       if (error || statusCode !== 200 || !stream) {
@@ -361,7 +363,8 @@ export default class GaanaSource {
         'User-Agent': USER_AGENT,
         Referer: 'https://gaana.com/'
       },
-      disableBodyCompression: true
+      disableBodyCompression: true,
+      proxy: this.config.proxy
     })
 
     if (error || statusCode !== 200 || !body) return null
